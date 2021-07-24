@@ -79,6 +79,7 @@ class Common extends cdk.Construct {
      */
     createAccessLogBucket() {
         return new s3.Bucket(this, 'AccessLogBucket', {
+            autoDeleteObjects: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
     }
@@ -164,6 +165,18 @@ class Layer extends cdk.Construct {
         const concat = new cdk.StringConcat();
         new cdk.CfnOutput(this, 'LoadBalancerURL', { value: concat.join('http://', this.loadBalancer.loadBalancerDnsName) });
     }
+
+    /**
+     * Debugging purpose
+     */
+     openSshPort(asg: autoscaling.AutoScalingGroup) {
+        const sg = new ec2.SecurityGroup(this, 'SecurityGroup', {
+            vpc: this.props.vpc,
+            allowAllOutbound: true,
+        });
+        sg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(22));
+        asg.addSecurityGroup(sg);
+    }
 }
 
 interface AppLayerProps extends LayerProps {
@@ -194,9 +207,10 @@ class AppLayer extends Layer {
             vpc: this.props.vpc,
             instanceType: this.getDefaultLaunchInstanceType(),
             machineImage: new ec2.AmazonLinuxImage({
+                generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
                 userData: this.createBaseUserData(),
             }),
-            minCapacity: 2,
+            minCapacity: 1,
             vpcSubnets: {
                 subnets: this.props.vpc.privateSubnets,
             }
@@ -254,14 +268,17 @@ class VarnishLayer extends Layer {
             vpc: this.props.vpc,
             instanceType: this.getDefaultLaunchInstanceType(),
             machineImage: new ec2.AmazonLinuxImage({
+                generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
                 userData: this.createBaseUserData(),
             }),
-            minCapacity: 2,
+            minCapacity: 1,
             vpcSubnets: {
                 subnets: this.props.vpc.publicSubnets,
-            }
+            },
+            
         });
 
+        //this.openSshPort(asg);
         return asg;
     }
 
