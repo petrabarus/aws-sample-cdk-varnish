@@ -13,7 +13,7 @@ acl purge {
 
 sub vcl_recv {
 
-    # Purge requests
+    # Purge cache requests
     if (req.method == "PURGE") {
         # Disallow purge from localhost.
         if (!client.ip ~ purge) {
@@ -29,4 +29,19 @@ sub vcl_recv {
         return (synth(200, "OK"));
     }
 
+    # Ban existing cache
+    if (req.method == "BAN") {
+        # Disallow ban from localhost.
+        if (!client.ip ~ purge) {
+            return (synth(405, "This IP is not allowed to send BAN requests."));
+        }
+        # Purge if no invalidate pattern existing 
+        if (!req.http.x-invalidate-pattern) {
+            return (purge);
+        }
+        # Ban URL based on invalidate pattern
+        ban("req.url ~ " + req.http.x-invalidate-pattern);
+        return (synth(200, "BAN Added"));
+    }
+    
 }
