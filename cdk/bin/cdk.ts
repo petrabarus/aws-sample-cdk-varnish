@@ -5,5 +5,9 @@ import { CdkStack } from '../lib/cdk-stack';
 
 const app = new cdk.App();
 new CdkStack(app, 'AwsSampleVarnishCdkStack', {
+    //dns for varnish instance to access
     internalRecordName: 'internal.prod',
+    env: {
+        region: 'ap-southeast-1',
+    }
 });

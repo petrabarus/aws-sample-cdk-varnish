@@ -51,6 +51,8 @@ class Common extends cdk.Construct {
         this.vpc = this.createVpc();
         this.privateHostedZone = this.createPrivateHostedZone();
         this.accessLogBucket = this.createAccessLogBucket();
+
+        this.output();
     }
 
     /**
@@ -80,6 +82,13 @@ class Common extends cdk.Construct {
             removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
     }
+
+    output() {
+        const concat = new cdk.StringConcat();
+        new cdk.CfnOutput(this, 'AccessLogBucketUri', {
+            value: concat.join('s3://', this.accessLogBucket.bucketName)
+        });
+    }
 }
 
 interface LayerProps {
@@ -93,6 +102,7 @@ class Layer extends cdk.Construct {
     protected loadBalancer: elbv2.ApplicationLoadBalancer;
     protected listener: elbv2.ApplicationListener;
     protected asset: assets.Asset;
+    protected layerName: string;
 
     constructor(scope: cdk.Construct, id: string, props: LayerProps) {
         super(scope, id);
@@ -110,7 +120,8 @@ class Layer extends cdk.Construct {
      * This will upload asset to S3 bucket that will be downloaded
      * and installed by the instances on their launch.
      */
-    createAsset(dirName: string) {
+    createAsset() {
+        const dirName = this.layerName;
         this.asset = new assets.Asset(this, 'Asset', {
             path: path.join(__dirname, `../../${dirName}/`),
         });
@@ -164,11 +175,16 @@ class AppLayer extends Layer {
 
     constructor(scope: cdk.Construct, id: string, props: AppLayerProps) {
         super(scope, id, props);
-        this.createAsset('varnish');
+        this.layerName = 'app';
+
+        this.createAsset();
+
         this.autoScalingGroup = this.createAutoScalingGroup();
         this.asset.bucket.grantRead(this.autoScalingGroup.role);
         this.loadBalancer = this.createLoadBalancer();
         this.listener = this.createListener();
+
+        this.createDnsRecord();
 
         this.output();
     }
@@ -197,6 +213,7 @@ class AppLayer extends Layer {
                 subnets: this.props.vpc.privateSubnets,
             }
         });
+        lb.logAccessLogs(this.props.accessLogBucket, this.layerName);
         return lb;
     }
 
@@ -220,12 +237,15 @@ class VarnishLayer extends Layer {
 
     constructor(scope: cdk.Construct, id: string, props: VarnishLayerProps) {
         super(scope, id, props);
-        this.createAsset('varnish');
+        this.layerName = 'varnish';
+
+        this.createAsset();
+
         this.autoScalingGroup = this.createAutoScalingGroup();
         this.asset.bucket.grantRead(this.autoScalingGroup.role);
         this.loadBalancer = this.createLoadBalancer();
         this.listener = this.createListener();
-
+        
         this.output();
     }
 
@@ -250,6 +270,7 @@ class VarnishLayer extends Layer {
             vpc: this.props.vpc,
             internetFacing: true
         });
+        lb.logAccessLogs(this.props.accessLogBucket, this.layerName);
         return lb;
     }
 
