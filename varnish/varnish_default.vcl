@@ -44,4 +44,21 @@ sub vcl_recv {
         return (synth(200, "BAN Added"));
     }
     
+    # Bypass Wordpress admin and login pages
+    if (req.url ~ "/wp-(login.php|admin)") {
+        return (pass);
+    }
+
+    # Bypass feed
+    if (req.url ~ "/feed") {
+        return (pass);
+    }
+
+    # Bypass mu-*
+    if (req.url ~ "/mu-*") {
+        return (pass);
+    }
+
+    # Cache everything otherwise
+    return (hash);
 }

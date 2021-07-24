@@ -1,6 +1,7 @@
 import * as cdk from '@aws-cdk/core';
 import * as ec2 from '@aws-cdk/aws-ec2';
 import * as s3 from '@aws-cdk/aws-s3';
+import * as iam from '@aws-cdk/aws-iam';
 import * as elbv2 from '@aws-cdk/aws-elasticloadbalancingv2';
 import * as autoscaling from '@aws-cdk/aws-autoscaling';
 import * as assets from '@aws-cdk/aws-s3-assets';
@@ -177,6 +178,21 @@ class Layer extends cdk.Construct {
         sg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(22));
         asg.addSecurityGroup(sg);
     }
+
+    grantCloudWatchAccess(role: iam.IRole) {
+        role.addToPrincipalPolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+                'logs:CreateLogGroup',
+                'logs:CreateLogStream',
+                'logs:PutLogEvents',
+                'logs:DescribeLogStreams'
+            ],
+            resources: [
+                'arn:aws:logs:*:*:*', //TODO
+            ]
+        }));
+    }
 }
 
 interface AppLayerProps extends LayerProps {
@@ -194,6 +210,7 @@ class AppLayer extends Layer {
 
         this.autoScalingGroup = this.createAutoScalingGroup();
         this.asset.bucket.grantRead(this.autoScalingGroup.role);
+        this.grantCloudWatchAccess(this.autoScalingGroup.role);
         this.loadBalancer = this.createLoadBalancer();
         this.listener = this.createListener();
 
@@ -257,6 +274,7 @@ class VarnishLayer extends Layer {
 
         this.autoScalingGroup = this.createAutoScalingGroup();
         this.asset.bucket.grantRead(this.autoScalingGroup.role);
+        this.grantCloudWatchAccess(this.autoScalingGroup.role);
         this.loadBalancer = this.createLoadBalancer();
         this.listener = this.createListener();
         
@@ -264,6 +282,8 @@ class VarnishLayer extends Layer {
     }
 
     createAutoScalingGroup(): autoscaling.AutoScalingGroup {
+        const keyPairName = this.node.tryGetContext('keyPairName');
+        
         const asg = new autoscaling.AutoScalingGroup(this, 'AutoScalingGroup', {
             vpc: this.props.vpc,
             instanceType: this.getDefaultLaunchInstanceType(),
@@ -275,10 +295,12 @@ class VarnishLayer extends Layer {
             vpcSubnets: {
                 subnets: this.props.vpc.publicSubnets,
             },
-            
+            keyName: keyPairName
         });
 
-        //this.openSshPort(asg);
+        if(keyPairName) {
+            this.openSshPort(asg);
+        }
         return asg;
     }
 

@@ -2,8 +2,17 @@
 amazon-linux-extras install epel
 
 yum install nginx -y
-systemctl enable nginx.service
+yum install awslogs -y
+yum install amazon-cloudwatch-agent -y
 
-cp -rf /tmp/user-data/* /usr/share/nginx/html/
+systemctl enable nginx.service
+systemctl enable awslogsd.service
+systemctl enable amazon-cloudwatch-agent.service
+
+cp -rf /tmp/user-data/public/* /usr/share/nginx/html/
+mv /tmp/user-data/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
 
 systemctl start nginx.service
+systemctl start awslogsd
+systemctl start amazon-cloudwatch-agent.service
