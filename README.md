@@ -41,5 +41,11 @@ cdk deploy
 To clean up the resource, plus you need to empty the log bucket.
 
 ```
+aws s3 rm s3://BUCKET_NAME --recursive
 ```
 
+Then execute
+
+```
+cdk destroy
+```
