@@ -1,0 +1,1 @@
+* * * * * root echo "<h1>Last Update $(date --iso-8601=seconds)</h1>" > /usr/share/nginx/html/minute.html

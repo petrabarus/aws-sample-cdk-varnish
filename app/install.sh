@@ -11,8 +11,9 @@ systemctl enable amazon-cloudwatch-agent.service
 
 cp -rf /tmp/user-data/public/* /usr/share/nginx/html/
 mv /tmp/user-data/amazon-cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
+cat /tmp/user-data/crontab.txt >> /etc/crontab
 
 systemctl start nginx.service
 systemctl start awslogsd
 systemctl start amazon-cloudwatch-agent.service
+systemctl start crond.service

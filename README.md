@@ -11,11 +11,12 @@ are located in the private subnets behind a private load balancer.
 
 The varnish instance contains 2 daemon: Varnish and Nginx. The reason behind this is because Varnish is not compatible with Amazon Elastic Load Balancer. (See this article for reason [ Using Varnish Proxy Cache with Amazon Web Service ELB Elastic Load Balancer ](http://blog.domenech.org/2013/09/using-varnish-proxy-cache-with-amazon-web-services-elastic-load-balancer-elb.html)).
 
-The private load balancer will be masked with private DNS name to simplify the Nginx configuration.
+The private load balancer will be masked with private DNS name to simplify the Nginx configuration. We also collect the log for the Nginx to CloudWatch logs using CloudWatch agent. This will be useful to debug the request.
 
 ![architecture](docs/images/AWS-Sample-Varnish-Page-2.png)
 
 Instead of storing the long DNS of the load balancer, we can easily use the private DNS name.
+
 ```conf
         location / {
             # We use internal domain name to mask the internal load balancer.
